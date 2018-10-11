@@ -6,10 +6,13 @@ import (
 	"time"
 )
 
-var (
-	Web   = fakeSearch("web")
-	Image = fakeSearch("image")
-	Video = fakeSearch("video")
+var ( // Multiple replicated servers to reduce tail latency
+	Web1   = fakeSearch("web")
+	Web2   = fakeSearch("web")
+	Image1 = fakeSearch("image")
+	Image2 = fakeSearch("image")
+	Video1 = fakeSearch("video")
+	Video2 = fakeSearch("video")
 )
 
 type Search func(query string) Result
@@ -37,13 +40,13 @@ func First(query string, replicas ...Search) Result {
 func Google(query string) (results []Result) {
 	c := make(chan Result)
 	go func() {
-		c <- Web(query)
+		c <- First(query, Web1, Web2)
 	}()
 	go func() {
-		c <- Image(query)
+		c <- First(query, Image1, Image2)
 	}()
 	go func() {
-		c <- Video(query)
+		c <- First(query, Video1, Video2)
 	}()
 
 	timeout := time.After(80 * time.Millisecond)
@@ -62,7 +65,7 @@ func Google(query string) (results []Result) {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	start := time.Now()
-	results := First("golang", fakeSearch("replica 1"), fakeSearch("replica 2"))
+	results := Google("golang")
 	elapsed := time.Since(start)
 	fmt.Println(results)
 	fmt.Println(elapsed)
